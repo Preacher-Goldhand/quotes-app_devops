@@ -1,0 +1,6 @@
+**/.vagrant/*
+**/node_modules/*
+**/configs/init-db.sql
+**/prod-env_infra/.vagrant/*
+.env
+package-lock.json
