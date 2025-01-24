@@ -1,28 +1,45 @@
 pipeline {
     agent any
 
+    environment {
+        TARGET_SERVER = env.TARGET_SERVER ?: 'default.server.address' 
+        TARGET_USER = env.TARGET_USER ?: 'default_user'             
+        CONFIG_DIR = 'configs'                                     
+    }
+
     stages {
         stage('Clone Repository') {
             steps {
                 echo 'Cloning repository from GitHub...'
-                // Clones the repository from GitHub (configured in the Jenkins job)
-                checkout scm
+                checkout scm 
+            }
+        }
+
+        stage('Prepare Configs') {
+            steps {
+                echo "Ensuring ${CONFIG_DIR} directory exists and is ready..."
+                sh '''
+                if [ ! -d ${CONFIG_DIR} ]; then
+                    echo "Error: ${CONFIG_DIR} directory not found!"
+                    exit 1
+                fi
+                '''
             }
         }
 
         stage('Deploy to Server') {
             steps {
-                echo 'Deploying to production server...'
+                echo "Deploying application to ${TARGET_USER}@${TARGET_SERVER}..."
 
-                // Copy docker-compose.yaml to the remote server
                 sh '''
-                scp -o StrictHostKeyChecking=no docker-compose.yaml root@192.168.1.3:/home/user/app/
+                scp -o StrictHostKeyChecking=no -r ${CONFIG_DIR} ${TARGET_USER}@${TARGET_SERVER}:/home/${TARGET_USER}/app/
                 '''
-
-                // Deploy the application using Docker Compose on the target server
                 sh '''
-                ssh -o StrictHostKeyChecking=no root@192.168.1.3<< EOF
-                cd /home/user/app/
+                scp -o StrictHostKeyChecking=no docker-compose.yaml ${TARGET_USER}@${TARGET_SERVER}:/home/${TARGET_USER}/app/
+                '''
+                sh '''
+                ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_SERVER} << EOF
+                cd /home/${TARGET_USER}/app/
                 docker-compose down
                 docker-compose pull
                 docker-compose up -d --build
