@@ -1,18 +1,22 @@
 pipeline {
     agent any
-
     environment {
-        TARGET_SERVER = env.TARGET_SERVER ?: 'default.server.address' 
-        TARGET_USER = env.TARGET_USER ?: 'default_user'             
-        CONFIG_DIR = 'configs'                                     
-        REMOTE_APP_DIR = "/home/${TARGET_USER}/app"                
+        CONFIG_DIR = 'configs'
+        REMOTE_APP_DIR = "/home/${TARGET_USER}/app"
+        GIT_REPO_URL = 'https://github.com/Preacher-Goldhand/quotes-app_devops.git'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                echo 'Cloning repository from GitHub...'
-                checkout scm 
+                script {
+                    if (!fileExists('.git')) {
+                        echo 'Cloning repository from GitHub...'
+                        sh "git clone ${GIT_REPO_URL} ."
+                    } else {
+                        echo 'Repository already exists. Skipping clone.'
+                    }
+                }
             }
         }
 
@@ -32,29 +36,45 @@ pipeline {
             steps {
                 echo "Deploying application to ${TARGET_USER}@${TARGET_SERVER}..."
 
-                sh '''
-                ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_SERVER} << EOF
-                if [ ! -d ${REMOTE_APP_DIR}/${CONFIG_DIR} ]; then
-                    echo "Remote configs directory not found. Copying ${CONFIG_DIR}..."
-                    exit 1
-                fi
-                EOF
-                ''' || sh '''
-                scp -o StrictHostKeyChecking=no -r ${CONFIG_DIR} ${TARGET_USER}@${TARGET_SERVER}:${REMOTE_APP_DIR}/
-                '''
+                withCredentials([sshUserPrivateKey(credentialsId: 'cd510649-af79-44a5-b082-2d749cd6b7fb', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''
+                    echo "Ensuring remote directory exists..."
+                    ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_SERVER} << EOF
+                    REMOTE_APP_DIR=${REMOTE_APP_DIR}
+                    if [ ! -d "$REMOTE_APP_DIR" ]; then
+                        echo "Creating directory $REMOTE_APP_DIR..."
+                        mkdir -p "$REMOTE_APP_DIR"
+                    fi
+EOF
 
-                sh '''
-                scp -o StrictHostKeyChecking=no docker-compose.yaml ${TARGET_USER}@${TARGET_SERVER}:${REMOTE_APP_DIR}/
-                '''
+                    echo "Copying configs to remote server..."
+                    scp -i ${SSH_KEY} -o StrictHostKeyChecking=no -r ${CONFIG_DIR} ${TARGET_USER}@${TARGET_SERVER}:${REMOTE_APP_DIR}/
 
-                sh '''
-                ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_SERVER} << EOF
-                cd ${REMOTE_APP_DIR}
-                docker-compose down
-                docker-compose pull
-                docker-compose up -d --build
-                EOF
-                '''
+                    echo "Copying docker-compose file..."
+                    scp -i ${SSH_KEY} -o StrictHostKeyChecking=no docker-compose.yaml ${TARGET_USER}@${TARGET_SERVER}:${REMOTE_APP_DIR}/
+
+                    echo "Copying public directory to remote server..."
+                    scp -i ${SSH_KEY} -o StrictHostKeyChecking=no -r public ${TARGET_USER}@${TARGET_SERVER}:${REMOTE_APP_DIR}/
+                    '''
+                    
+                    echo "Running docker-compose on remote server..."
+
+                    sh '''
+                    ssh -tt -i ${SSH_KEY} -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_SERVER} << EOF
+                    REMOTE_APP_DIR=${REMOTE_APP_DIR}
+                    cd "$REMOTE_APP_DIR"
+                    if [ ! -f docker-compose.yaml ]; then
+                        echo "Error: docker-compose.yaml not found in $REMOTE_APP_DIR!"
+                        exit 1
+                    fi
+                    docker-compose down
+                    docker-compose up -d
+                    # Wait for containers to be up and running (with a timeout of 5 minutes)
+                    timeout 300 sh -c "until docker-compose ps | grep 'Up' > /dev/null; do echo 'Waiting for containers...'; sleep 10; done"
+                    echo "Docker containers are up and running!"
+EOF
+                    '''
+                }
             }
         }
     }
