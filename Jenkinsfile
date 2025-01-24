@@ -24,7 +24,7 @@ pipeline {
                 ssh -o StrictHostKeyChecking=no root@192.168.1.3<< EOF
                 cd /home/user/app/
                 docker-compose down
-                docker-compose pullcd ..
+                docker-compose pull
                 docker-compose up -d --build
                 EOF
                 '''
