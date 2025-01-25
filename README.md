@@ -23,7 +23,7 @@ This is a web-based application designed for managing quotes. The application is
 - **Jenkins**:
   - CI/CD process
 
-### Repo Structure
+## Repo Structure
 
 The project is organized into the following directories and files:
 
@@ -36,7 +36,7 @@ Dockerfile
 docker-compose.yaml
 ```
 
-### Infrastructure as Code (IaC) with Vagrant
+## Infrastructure as Code (IaC) with Vagrant
 
 To ensure consistent server environments, Vagrant is used for Infrastructure as Code (IaC). The repository includes a directory `iac` that contains all required configurations and provisioning scripts.
 
@@ -50,7 +50,7 @@ To ensure consistent server environments, Vagrant is used for Infrastructure as 
    - These scripts automate the installation of required software, configuration of services, and setup of necessary dependencies for both Jenkins and production environments.
      
 
-### CI/CD Process Overview (Jenkins)
+## CI/CD Process Overview (Jenkins)
 
 The CI/CD pipeline in Jenkins is designed to automate the deployment of the web application to the production environment. Here's a step-by-step explanation:
 
