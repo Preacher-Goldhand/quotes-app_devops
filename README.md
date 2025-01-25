@@ -45,8 +45,8 @@ To ensure consistent server environments, Vagrant is used for Infrastructure as 
 
 2. **Provisioning Scripts**:
    - Two key scripts are used to provision environments:
-     - `jenkins_provision.sh`: Located in `iac/jenkins_infra`, this script provisions servers for Jenkins infrastructure.
-     - `prod_provision.sh`: Located in `iac/prod-env_infra`, this script provisions servers for the production environment.
+     - `jenkins_provision.sh`: Located in `iac/jenkins_infra`, this script provisions servers for Jenkins infrastructure (Jenkins server installation).
+     - `prod_provision.sh`: Located in `iac/prod-env_infra`, this script provisions servers for the production environment (Docker installation).
    - These scripts automate the installation of required software, configuration of services, and setup of necessary dependencies for both Jenkins and production environments.
      
 
@@ -74,6 +74,11 @@ The CI/CD pipeline in Jenkins is designed to automate the deployment of the web 
 4. **Post-Build Actions**:
    - On success, a message "Deployment was successful!" is displayed.
    - On failure, an error message "Deployment failed. Check the logs for details." is shown, helping users troubleshoot issues.
+
+
+## Links: 
+
+Here is a link to Docker image of the application server: https://hub.docker.com/r/preachergoldhand/quotes_app
 
 ## License
 
